@@ -150,7 +150,10 @@ class Grumpy:
         for name, plugin in self.plugins.items():
             try:
                 logging.debug('{} | {} | {} | {}'.format(name, sender, destination, message))
-                plugin.run(sender, destination, message)
+                messages = plugin.run(sender, destination, message)
+
+                for message in messages:
+                    self._send_message(message['destination'], message['message'])
             except GrumpyRuntimeException as e:
                 logging.error(e)
 

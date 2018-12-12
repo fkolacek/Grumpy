@@ -13,3 +13,5 @@ class GrumpyPlugin(GrumpyBasePlugin):
 
     def run(self, sender, destination, message):
         print('Running info plugin')
+
+        return []
