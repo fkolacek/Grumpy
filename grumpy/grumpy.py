@@ -6,14 +6,16 @@
 import logging
 import socket
 import re
+from importlib import import_module
 
-from .exception import GrumpyException
+from .exception import GrumpyException, GrumpyRuntimeException
 from .config import GrumpyConfig
 
 
 class Grumpy:
 
     config = None
+    plugins = {}
     connection = None
 
     def __init__(self, config_name='config.ini'):
@@ -21,6 +23,7 @@ class Grumpy:
             self.config = GrumpyConfig(config_name)
 
             self.init_logging()
+            self.init_plugins()
 
         except GrumpyException:
             raise
@@ -30,6 +33,18 @@ class Grumpy:
 
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                             level=level)
+
+    def init_plugins(self):
+        logging.info('Loading plugins')
+        for name in self.config['main']['plugins']:
+            try:
+                logging.info('Loading plugin: {}'.format(name))
+                module = import_module('grumpy.plugins.{}'.format(name))
+                plugin = getattr(module, 'GrumpyPlugin')
+
+                self.plugins[name] = plugin(self.connection)
+            except ImportError:
+                raise GrumpyRuntimeException('Cannot load plugin: {}'.format(name)) from None
 
     def run(self):
         logging.info('Starting bot')
@@ -80,8 +95,11 @@ class Grumpy:
             line = line.strip()
 
             if line == '':
-                pass
-            elif re.match('^NOTICE AUTH', line):
+                continue
+
+
+            # NOTICE messages
+            if re.match('^NOTICE AUTH', line):
                 logging.info('<====== "{}"'.format(line))
             # Initialization is done
             elif re.search('^:{} 376 {} :End of /MOTD command.'.format(conf['server'], conf['nick']), line):
@@ -99,21 +117,43 @@ class Grumpy:
                 for channel in conf['channels']:
                     self._send_message('chanserv', 'INVITE {}'.format(channel))
                     self._send_raw_message('JOIN {}'.format(channel))
+            # INVITES from chanserv
             elif re.match('^:CHANSERV!chan@services.int INVITE', line):
+                logging.info('<====== "{}"'.format(line))
+
                 m = re.match('^:CHANSERV!chan@services.int INVITE .+:(.+)$', line)
 
-                if m:
-                    self._send_raw_message('JOIN {}'.format(m.group(1)))
-
+                self._send_raw_message('JOIN {}'.format(m.group(1)))
+            # Status messages
             elif re.match('^:{} [0-9]+ {} '.format(conf['server'], conf['nick']), line):
                 logging.info('<====== "{}"'.format(line))
+            # PING messages
             elif re.match('^PING :', line):
                 logging.info('<====== "{}"'.format(line))
+
                 self._send_raw_message('PONG :{}'.format(conf['server']))
+            # PRIVMSG
+            elif re.match('^:.+ PRIVMSG .+ :', line):
+                logging.info('<====== "{}"'.format(line))
+
+                m = re.match('^:(.+)!~.+ PRIVMSG (.+) :(.+)$'.format(conf['nick']), line)
+
+                self._handle_message(m.group(1), m.group(2), m.group(3))
+            # Unhandled messages
             else:
-                print(line)
+                logging.warning('<=== "{}"'.format(line))
 
         # In case all lines were processed empty the buffer
         return ''
+
+    def _handle_message(self, sender, destination, message):
+        for name, plugin in self.plugins.items():
+            try:
+                logging.debug('{} | {} | {} | {}'.format(name, sender, destination, message))
+                plugin.run(sender, destination, message)
+            except GrumpyRuntimeException as e:
+                logging.error(e)
+
+
 
 

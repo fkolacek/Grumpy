@@ -20,6 +20,7 @@ class GrumpyConfig:
             'servername': 'servername',
             'realname': 'Lord Grumpy',
             'debug': False,
+            'plugins': [],
         },
         'userserv': {
             'username': None,
@@ -41,6 +42,8 @@ class GrumpyConfig:
                 self._parse_main(conf, section)
             elif section == 'userserv':
                 self._parse_userserv(conf, section)
+            elif section.startswith('plugin_'):
+                self._parse_plugin(conf, section)
             else:
                 raise GrumpyConfigException('Invalid section "{}" in config file: "{}"'.format(section, config_name))
 
@@ -62,6 +65,8 @@ class GrumpyConfig:
                 self.config[section][key] = conf[section][key]
             elif key == 'debug':
                 self.config[section][key] = conf[section][key].lower() == 'true'
+            elif key == 'plugins':
+                self.config[section][key] = conf[section][key].split(',')
             else:
                 raise GrumpyConfigException('Invalid key "{}" found "{}" section'.format(key, section))
 
@@ -75,6 +80,12 @@ class GrumpyConfig:
                 self.config[section][key] = conf[section][key].lower() == 'true'
             else:
                 raise GrumpyConfigException('Invalid key "{}" found "{}" section'.format(key, section))
+
+    def _parse_plugin(self, conf, section):
+        plugin = section.replace('plugin_', '')
+
+        for key in conf[section]:
+            self.config[plugin][key] = conf[section][key]
 
     def __getitem__(self, item):
         return self.config.get(item)
