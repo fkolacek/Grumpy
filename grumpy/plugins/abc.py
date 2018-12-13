@@ -8,7 +8,8 @@ from abc import ABC
 
 class GrumpyBasePlugin(ABC):
 
-    def __init__(self, connection):
+    def __init__(self, config, connection):
+        self.config = config
         self.connection = connection
 
     def run(self, sender, destination, message):

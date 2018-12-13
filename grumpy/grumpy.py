@@ -42,7 +42,7 @@ class Grumpy:
                 module = import_module('grumpy.plugins.{}'.format(name))
                 plugin = getattr(module, 'GrumpyPlugin')
 
-                self.plugins[name] = plugin(self.connection)
+                self.plugins[name] = plugin(self.config, self.connection)
             except ImportError:
                 raise GrumpyRuntimeException('Cannot load plugin: {}'.format(name)) from None
 
