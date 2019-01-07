@@ -123,6 +123,9 @@ class Grumpy:
 
                 m = re.match('^:CHANSERV!chan@services.int INVITE .+:(.+)$', line)
 
+                if not m:
+                    continue
+
                 self._send_raw_message('JOIN {}'.format(m.group(1)))
             # Status messages
             elif re.match('^:{} [0-9]+ {} '.format(conf['server'], conf['nick']), line):
