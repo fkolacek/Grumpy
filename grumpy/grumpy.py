@@ -138,6 +138,9 @@ class Grumpy:
 
                 m = re.match('^:(.+)!~.+ PRIVMSG (.+) :(.+)$'.format(conf['nick']), line)
 
+                if not m:
+                    continue
+
                 self._handle_message(m.group(1), m.group(2), m.group(3))
             # Unhandled messages
             else:

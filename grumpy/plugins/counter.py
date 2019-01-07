@@ -20,7 +20,7 @@ class GrumpyPlugin(GrumpyBasePlugin):
         self._load_counter()
 
     def run(self, sender, destination, message):
-        m = re.search('^([^+\-]+)(\+\+|\-\-) ?$',message)
+        m = re.search('^([^+\-]+)(\+\+|\-\-) ?$', message)
 
         if not m:
             return []
